@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seller Command Center — Configuration &amp; Implementation Guide</title>
+<script src="https://assets.meshmesh.io/system/tailwindcss-browser-4.js"></script>
+<style type="text/tailwindcss">
+@theme {
+  --color-navy: #204869;
+  --color-navydeep: #1b3a57;
+  --color-ink: #002f6c;
+  --color-vblue: #00a0df;
+  --color-vgreen: #82bc00;
+  --color-alert: #c23934;
+}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+<header class="bg-gradient-to-br from-navydeep via-navy to-[#24537a] text-white">
+  <div class="max-w-5xl mx-auto px-6 py-12">
+    <p class="uppercase tracking-widest text-xs text-white/70">Configuration &amp; Implementation Guide · Sales Cloud · Agentforce Coworker</p>
+    <h1 class="text-4xl font-bold mt-2">Seller Command Center</h1>
+    <p class="mt-3 text-white/85 max-w-3xl">This guide shows how to rebuild the Seller Command Center in your own org. It covers two proven build paths: a <b>Lightning page on Sales Home</b> and a <b>React app on Salesforce Multi-Framework</b>. Both use the same data engine and both connect to <b>Agentforce Coworker</b>. Start with section 1 to pick the right path.</p>
+    <div class="flex flex-wrap gap-2 mt-6 text-xs">
+      <span class="bg-white/15 rounded-full px-3 py-1">Path 1 · Lightning Web Components</span>
+      <span class="bg-white/15 rounded-full px-3 py-1">Path 2 · React (Multi-Framework)</span>
+      <span class="bg-white/15 rounded-full px-3 py-1">Shared Apex data engine</span>
+      <span class="bg-white/15 rounded-full px-3 py-1">Agentforce Coworker</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-6 -mt-6 pb-16 space-y-8">
+
+  <nav class="bg-white rounded-xl shadow p-6 border-t-4 border-vblue">
+    <h2 class="text-ink font-bold text-lg mb-3">Contents</h2>
+    <ol class="sm:columns-2 gap-x-10 text-sm list-none">
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">1.</span><a href="#choose" class="text-vblue hover:underline">Choose your path</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">2.</span><a href="#prereqs" class="text-vblue hover:underline">Prerequisites</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">3.</span><a href="#engine" class="text-vblue hover:underline">The shared data engine</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">4.</span><a href="#lightning" class="text-vblue hover:underline">Path 1 — Lightning page build</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">4A.</span><a href="#brief-setup" class="text-vblue hover:underline pl-3">Seller Brief auto-trigger setup</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">5.</span><a href="#react" class="text-vblue hover:underline">Path 2 — React app build</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">6.</span><a href="#coworker" class="text-vblue hover:underline">Agentforce Coworker integration</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">7.</span><a href="#addons" class="text-vblue hover:underline">Optional AI add-ons</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">8.</span><a href="#customize" class="text-vblue hover:underline">Customizing for your org</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">9.</span><a href="#test" class="text-vblue hover:underline">Test checklist</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">10.</span><a href="#trouble" class="text-vblue hover:underline">Troubleshooting &amp; lessons learned</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">11.</span><a href="#rollback" class="text-vblue hover:underline">Rollback</a></li>
+      <li class="break-inside-avoid mb-1 flex gap-2"><span class="w-7 shrink-0 text-right font-semibold text-slate-500">A.</span><a href="#files" class="text-vblue hover:underline">Appendix: source files</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 CHOOSE -->
+  <section id="choose" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-navy">
+    <div class="bg-[#dfe7ef] px-6 py-4"><h2 class="text-ink font-bold text-xl">1. Choose your path</h2></div>
+    <div class="p-6 space-y-5 text-sm">
+      <div class="grid md:grid-cols-2 gap-4">
+        <figure><img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/492476bf-030b-4acd-8617-3c26bd84a53e.png" alt="Lightning path"><figcaption class="text-xs text-slate-500 mt-1">Path 1 — Lightning page on the Sales Home tab</figcaption></figure>
+        <figure><img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/6347e63b-6203-4b15-989c-a77a36d9c61a.png" alt="React path"><figcaption class="text-xs text-slate-500 mt-1">Path 2 — React app with the on-page Coworker chat</figcaption></figure>
+      </div>
+      <table class="w-full border rounded-lg overflow-hidden text-xs md:text-sm">
+        <thead class="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500"><tr><th class="p-2 w-40">Layer</th><th class="p-2">Path 1 — Lightning page</th><th class="p-2">Path 2 — React app</th></tr></thead>
+        <tbody class="divide-y">
+          <tr><td class="p-2 font-semibold">Where users open it</td><td class="p-2">Sales app → Home tab</td><td class="p-2">App Launcher → "Seller Command Center (React)" (runs on its own <code>*.my.salesforce.app</code> domain)</td></tr>
+          <tr><td class="p-2 font-semibold">UI technology</td><td class="p-2">Lightning Web Component + Chart.js</td><td class="p-2">React 19 + TypeScript, Vite, Tailwind/shadcn, Chart.js</td></tr>
+          <tr><td class="p-2 font-semibold">Hosting</td><td class="p-2">Lightning App Builder Home page with a full-width home template</td><td class="p-2">UIBundle (Salesforce Multi-Framework) + App Launcher entry</td></tr>
+          <tr><td class="p-2 font-semibold">Data engine</td><td class="p-2">Shared Apex controller (Lightning calls)</td><td class="p-2">Same Apex controller via Apex REST + the Data SDK</td></tr>
+          <tr><td class="p-2 font-semibold">Insight cards</td><td class="p-2">Rule-based (Apex)</td><td class="p-2">Rule-based (Apex), labelled "Seller Insights · Rule-based"</td></tr>
+          <tr><td class="p-2 font-semibold">Coworker experience</td><td class="p-2">Generate Seller Brief opens the Coworker page with the full AI brief running</td><td class="p-2">Floating on-page Coworker chat; Generate Seller Brief shows an instant snapshot in the chat and opens the full AI brief in a new tab</td></tr>
+          <tr><td class="p-2 font-semibold">Edit without code</td><td class="p-2">Yes — goals, as-of date, territory, Coworker URL path (Lightning App Builder)</td><td class="p-2">No — App Builder editing isn't available for these apps yet; settings live in code</td></tr>
+          <tr><td class="p-2 font-semibold">Unique setup</td><td class="p-2">Assign the page to the Sales app</td><td class="p-2">Hyperforce org, app domain trusted for Lightning Out, browsers allow Salesforce cookies</td></tr>
+          <tr><td class="p-2 font-semibold">Skills needed</td><td class="p-2">Salesforce admin + Apex/LWC developer</td><td class="p-2">Salesforce admin + Apex developer + React/TypeScript developer</td></tr>
+          <tr><td class="p-2 font-semibold">Typical effort</td><td class="p-2">2–4 days</td><td class="p-2">3–6 days (includes the shared engine)</td></tr>
+        </tbody>
+      </table>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-[#ecf5d7] border-l-4 border-vgreen rounded p-4"><b class="text-ink">Pick Path 1</b> if your org runs on Lightning and wants the command center on the Home tab, maintained by admins without code, and it's fine for Coworker to open on its own page.</div>
+        <div class="bg-[#dcf1fa] border-l-4 border-vblue rounded p-4"><b class="text-ink">Pick Path 2</b> if your team builds in React, wants full design control, and wants Coworker as a chat on the same page. You'll run a separate app and do a few extra setup steps.</div>
+      </div>
+      <p>Both paths can run side by side, as they do in the reference org. Both read live data through the same Apex logic, so they show the same numbers.</p>
+    </div>
+  </section>
+
+  <!-- 2 PREREQS -->
+  <section id="prereqs" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vgreen">
+    <div class="bg-[#ecf5d7] px-6 py-4"><h2 class="text-ink font-bold text-xl">2. Prerequisites</h2></div>
+    <div class="p-6 grid md:grid-cols-3 gap-6 text-sm">
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Both paths</h3>
+        <ul class="list-disc list-inside space-y-1">
+          <li>Lightning Experience, the Sales app, and a sandbox to build in</li>
+          <li>Opportunity, Task and Event data (Amount, Stage, Probability, Close Date, Type)</li>
+          <li><b>Agentforce Coworker</b> enabled. Sellers need the Coworker User permission set, and the global search <b>Ask</b> button must be visible.</li>
+          <li>Agentforce credits, which every Coworker conversation uses</li>
+          <li>Your deployment path (change sets, DevOps Center or CI/CD)</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Path 1 — Lightning</h3>
+        <ul class="list-disc list-inside space-y-1">
+          <li>VS Code + Salesforce Extensions (for the LWC)</li>
+          <li>Lightning App Builder access</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Path 2 — React</h3>
+        <ul class="list-disc list-inside space-y-1">
+          <li>An org on <b>Hyperforce</b> (Enterprise, Performance, Unlimited or Developer edition)</li>
+          <li><b>Salesforce Multi-Framework</b> enabled, with the Salesforce App Domain active (Setup → Salesforce Multi-Framework Apps)</li>
+          <li>Salesforce Edge Network on, and "Require first-party use of Salesforce cookies" <b>off</b> (Setup → My Domain)</li>
+          <li>Node.js 20+ and npm, VS Code + Salesforce Extensions, and an up-to-date Salesforce CLI</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 ENGINE -->
+  <section id="engine" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vblue">
+    <div class="bg-[#dcf1fa] px-6 py-4"><h2 class="text-ink font-bold text-xl">3. The shared data engine</h2></div>
+    <div class="p-6 space-y-4 text-sm">
+<pre class="bg-slate-900 text-slate-100 rounded p-4 text-xs overflow-x-auto">                       ┌─────────────────────────────────────────┐
+ Path 1 (LWC) ───────▶ │ SellerCommandCenterController (Apex)    │ ──▶ Opportunity · Task · Event
+   @AuraEnabled calls  │  getDashboard() · askCommandCenter()    │     (with sharing, user mode)
+                       │  quota · health · insights · sample     │
+ Path 2 (React) ─────▶ │ SellerCommandCenterRest (Apex REST)     │
+   Data SDK fetch      │  GET /scc/v1/dashboard · POST /scc/v1/ask│
+                       └─────────────────────────────────────────┘</pre>
+      <table class="w-full border rounded-lg overflow-hidden">
+        <tbody class="divide-y">
+          <tr><td class="p-2 font-semibold w-48">Quarter</td><td class="p-2">The calendar quarter containing the <b>as-of date</b> (blank means today). This assumes a fiscal year starting in January; change the Context class if yours doesn't.</td></tr>
+          <tr><td class="p-2 font-semibold">QTD Booked / % to quota</td><td class="p-2">Closed Won Amount in the quarter ÷ goal. The goal is a setting (my goal and team goal), so no Forecasting quota object is required.</td></tr>
+          <tr><td class="p-2 font-semibold">Selling days / pace</td><td class="p-2">Weekdays left in the quarter; pace = amount still to book ÷ selling days</td></tr>
+          <tr><td class="p-2 font-semibold">Pacing index</td><td class="p-2">Booked ÷ (goal × fraction of the quarter elapsed) × 100</td></tr>
+          <tr><td class="p-2 font-semibold">Deal health</td><td class="p-2"><b>At risk</b> = past its close date, or closes within 3 days at 20% probability or less. <b>Watch</b> = closes within 7 days below 75%. Otherwise <b>Healthy</b>.</td></tr>
+          <tr><td class="p-2 font-semibold">Insight cards (rule-based)</td><td class="p-2">Urgent = the largest at-risk deal · Revenue = the largest deal at 75% or higher closing within 7 days · Risk = the largest deal at 35% or lower closing within 7 days · Inventory = sample · Follow-up = proposals due this week plus overdue tasks</td></tr>
+          <tr><td class="p-2 font-semibold">Needs Attention / Today</td><td class="p-2">The seller's open Tasks, oldest first, tagged SLA breach, Blocking, Warm or FYI. Today's Events, flagged Conflict or Prep gap; sample meetings show when there are none.</td></tr>
+          <tr><td class="p-2 font-semibold">Sample tiles</td><td class="p-2">Avails, inventory mix, delivery watchlist, CPM, sell-through and Tableau views come from <code>buildSample()</code> until real sources are connected</td></tr>
+        </tbody>
+      </table>
+      <p class="text-xs text-slate-500">Deploy the controller with its test class (about 98% coverage). Path 2 also needs <code>SellerCommandCenterRest</code> and its test (100%). Apps hosted on Multi-Framework can't call <code>@AuraEnabled</code> methods; they use Apex REST, GraphQL or the UI API instead.</p>
+    </div>
+  </section>
+
+  <!-- 4 LIGHTNING -->
+  <section id="lightning" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vgreen">
+    <div class="bg-[#ecf5d7] px-6 py-4"><h2 class="text-ink font-bold text-xl">4. Path 1 — Lightning page build</h2><p class="text-xs text-slate-600 mt-1">Build in a sandbox in this order, then promote.</p></div>
+    <div class="p-6 space-y-4 text-sm">
+      <div class="grid md:grid-cols-2 gap-3">
+        <img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/6302dd04-a8c3-4d07-b93c-bc3dd7d5265b.png" alt="Pacing and insights">
+        <img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/4e641b00-dea5-4eb3-89e7-5cbcf73c5cc1.png" alt="Opportunities">
+      </div>
+      <ol class="space-y-3">
+        <li class="border rounded-lg p-3"><b class="text-ink">L1 · Static resources.</b> In Setup → Static Resources, upload <code>chartjs</code> (Chart.js 4.4.4 <code>chart.umd.min.js</code>) and your logo (here <code>valpakClippLogo</code>), both with Cache Control set to Public. The names must match the component's imports.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L2 · Apex.</b> Deploy <code>SellerCommandCenterController</code> and its test (section 3). Deploy the Apex before the LWC.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L3 · LWC <code>sellerCommandCenter</code>.</b> Exposed to Home and App pages, with these settings: <i>My quarter goal</i> (11,200,000), <i>Team goal</i> (17,000,000), <i>As-of date</i> (blank means today), <i>Default territory</i> (MINE or ALL), and <i>Coworker URL path</i> (<code>/lightning/coworker</code>).</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L4 · Full-width home template.</b> Create the Aura component <code>commandCenterFullWidth</code> (it implements <code>lightning:homeTemplate</code>, with a design file declaring one <code>main</code> region). The standard home templates limit the main area to about two-thirds of the page width.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L5 · Home page.</b> In Lightning App Builder, choose New → Home Page, pick the "Full Width (Single Region)" template, drag in Seller Command Center, set its properties, and save.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L6 · Access.</b> Create the <code>Seller_Command_Center</code> permission set with Apex class access to the controller (and to the REST class, for Path 2), and assign it to sellers.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L7 · Activate.</b> Go to Activation → App Default → Sales app → Desktop. Leave the org default unchanged so other apps keep their current Home page.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">L8 · Generate Seller Brief</b> (full setup in <a href="#brief-setup" class="text-vblue underline">section 4A</a>). The button opens <code>{Coworker URL path}?c__term=&lt;brief request&gt;&amp;uid=&lt;new id&gt;</code>. Coworker submits the request on load, using the dashboard's own figures. Nothing needs configuring in Coworker.</li>
+      </ol>
+    </div>
+  </section>
+
+
+  <!-- 4A BRIEF AUTO-TRIGGER -->
+  <section id="brief-setup" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vblue">
+    <div class="bg-[#dcf1fa] px-6 py-4"><h2 class="text-ink font-bold text-xl">4A. Setting up the Seller Brief auto-trigger (Lightning page → Coworker)</h2><p class="text-xs text-slate-600 mt-1">Clicking ✦ Generate Seller Brief opens Agentforce Coworker and runs the brief request automatically, without the seller typing anything. There's no Flow, agent build or Prompt Builder template to create. It needs Coworker set up, one button in the component, and one page setting.</p></div>
+    <div class="p-6 space-y-5 text-sm">
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">How it works</h3>
+<pre class="bg-slate-900 text-slate-100 rounded p-4 text-xs overflow-x-auto">Seller clicks "✦ Generate Seller Brief"
+   │  1. The component builds the brief request from the dashboard's live figures
+   │  2. It opens:  {Coworker URL path}?c__term=&lt;URL-encoded request&gt;&amp;uid=&lt;new random id&gt;
+   ▼
+Agentforce Coworker page loads
+   │  3. Coworker reads c__term and submits it as the first message (auto-trigger)
+   │  4. uid makes every click a fresh conversation
+   ▼
+Coworker searches the seller's Opportunities, Events and Tasks (as the seller)
+and writes a three-part brief: Calendar &amp; meeting prep · Dashboard · Prioritized next steps</pre>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Step 1 — Admin: make Coworker available to sellers</h3>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>Confirm Agentforce is enabled (Setup → Agentforce Agents) and that <b>Agentforce Coworker</b> is turned on (Setup → Agentforce Coworker).</li>
+          <li>Confirm the Coworker agent (shown as <b>Search Agent</b> in Setup → Agentforce Agents) is <b>Active</b>.</li>
+          <li>Assign these permission sets to every seller:
+            <ul class="list-disc list-inside ml-5 mt-1">
+              <li><b>Agentforce Coworker User</b> (API name <code>AISearchUser</code>)</li>
+              <li><b>Search Agent Access</b> (API name <code>SentOS_Agent_Access</code>), which grants access to the Coworker agent</li>
+              <li>Admins who manage Coworker also get <b>Agentforce Coworker Admin</b> (<code>AISearchAdmin</code>)</li>
+            </ul>
+          </li>
+          <li>Check as a seller: the <b>Ask</b> button appears next to global search, and typing a question there offers <b>Ask Coworker</b>.</li>
+        </ol>
+        <p class="text-xs text-slate-500 mt-1">Permission set labels can vary slightly between releases and editions; search Setup → Permission Sets for "Coworker" and "Agent Access".</p>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Step 2 — Confirm the Coworker page address in your org</h3>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>Signed in as a seller, type any question in global search and choose <b>Ask Coworker</b>.</li>
+          <li>Look at the browser address bar. Today it reads <code>/lightning/coworker?c__term=…&amp;uid=…</code>.</li>
+          <li>Note the path part (<code>/lightning/coworker</code>). That's the value for the page setting in Step 4.</li>
+        </ol>
+        <div class="bg-amber-50 border-l-4 border-amber-500 rounded p-3 mt-2 text-xs">This address isn't a published Salesforce API. It changed once already, in October 2026, from <code>/lightning/search/agent</code> (with <code>c__ts</code>) to <code>/lightning/coworker</code> (with <code>uid</code>). Repeat this check after each Salesforce release.</div>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Step 3 — Developer: the button and the hand-off code (already in the component)</h3>
+        <p class="mb-2">The button in <code>sellerCommandCenter.html</code>:</p>
+<pre class="bg-slate-900 text-slate-100 rounded p-3 text-xs overflow-x-auto">&lt;button class="hdr-btn hdr-btn-primary" onclick={handleBrief}&gt;✦ Generate Seller Brief&lt;/button&gt;</pre>
+        <p class="my-2">The hand-off in <code>sellerCommandCenter.js</code> (the component uses <code>NavigationMixin</code>):</p>
+<pre class="bg-slate-900 text-slate-100 rounded p-3 text-xs overflow-x-auto">@api coworkerPath = '/lightning/coworker';   // exposed as a page setting (Step 4)
+
+handleBrief() {
+    this[NavigationMixin.Navigate]({
+        type: 'standard__webPage',
+        attributes: {
+            url: `${this.coworkerPath || '/lightning/coworker'}?c__term=${encodeURIComponent(this.sellerBriefPrompt)}&amp;uid=${newConversationId()}`
+        }
+    });
+}
+
+// A new random id per click so Coworker starts a fresh conversation
+function newConversationId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) =&gt; {
+        const r = Math.floor(Math.random() * 16);
+        return (c === 'x' ? r : (r % 4) + 8).toString(16);
+    });
+}</pre>
+        <p class="my-2">The request itself is built from the dashboard so the brief matches what the seller sees:</p>
+<pre class="bg-slate-900 text-slate-100 rounded p-3 text-xs overflow-x-auto">get sellerBriefPrompt() {
+    const base = 'Generate my seller brief. Summarize (1) my calendar for today and any meeting prep I need, ' +
+                 '(2) my sales dashboard, and (3) my top next steps for today, prioritized.';
+    // ...then appends live figures, e.g.:
+    // "My dashboard: 90% to quota ($10.07M booked of $11.20M goal); 13 selling days left, $87K/day needed;
+    //  weighted pipeline $3.39M across 138 open deals; $2.90M at risk across 64 deals (largest: Omega, Inc., $128K);
+    //  12 overdue follow-up tasks."
+}</pre>
+        <p class="text-xs text-slate-500 mt-1">Expose the path in <code>sellerCommandCenter.js-meta.xml</code>: <code>&lt;property name="coworkerPath" type="String" label="Coworker URL path" default="/lightning/coworker"/&gt;</code></p>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Step 4 — Admin: set the Coworker URL path on the page</h3>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>Open the <b>Seller Command Center</b> Home page in Lightning App Builder.</li>
+          <li>Select the Seller Command Center component.</li>
+          <li>In <b>Coworker URL path</b>, enter the path from Step 2 (default <code>/lightning/coworker</code>).</li>
+          <li>Save. There's no need to reactivate.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Step 5 — Test it</h3>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>As a seller, open the Sales app Home tab and click <b>✦ Generate Seller Brief</b>.</li>
+          <li>Coworker opens and the request appears as the first message with no typing. Coworker shows steps such as "Finding Salesforce records (Opportunity / Event / Task)".</li>
+          <li>The answer has three sections (Calendar &amp; Meeting Prep · Dashboard Summary · Top Next Steps) with linked records.</li>
+        </ol>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <h3 class="font-semibold text-ink mb-2">What answers the brief</h3>
+          <ul class="list-disc list-inside space-y-1">
+            <li><b>Agent:</b> Coworker (Search Agent) using its standard "find Salesforce records" capability. It runs as the seller, so sharing and field security apply.</li>
+            <li><b>Prompt Builder:</b> the seller brief uses no template. If a seller instead asks Coworker for an <i>account</i> brief, Coworker may use an account-brief action, for example "Create an Account Executive Brief" or a custom Valpak Account Brief template on a connected agent.</li>
+            <li><b>Credits:</b> each brief uses Agentforce credits.</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-ink mb-2">Customize the brief</h3>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Edit the wording or sections in <code>sellerBriefPrompt</code>, for example to add "competitive threats" or change the number of next steps.</li>
+            <li>Keep the request specific. Short requests like "seller brief" can be routed to other agents' topics, which then ask "which account?".</li>
+            <li>Keep figures concise. The full request travels in the page address.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-ink mb-2">Troubleshooting the auto-trigger</h3>
+        <table class="w-full border rounded-lg overflow-hidden text-xs md:text-sm">
+          <tbody class="divide-y">
+            <tr><td class="p-2 font-semibold w-1/3">"Page doesn't exist"</td><td class="p-2">The Coworker address changed. Redo Step 2 and update the page setting in Step 4.</td></tr>
+            <tr><td class="p-2 font-semibold">Coworker opens but nothing runs</td><td class="p-2">The parameter name changed. Check the address from Ask Coworker for the current parameter (today <code>c__term</code>).</td></tr>
+            <tr><td class="p-2 font-semibold">No Ask button, or access denied</td><td class="p-2">The seller is missing the Coworker User or agent access permission set (Step 1), or Coworker is off.</td></tr>
+            <tr><td class="p-2 font-semibold">Coworker asks "which account?"</td><td class="p-2">The request was too short or vague. Use the full request built by <code>sellerBriefPrompt</code>.</td></tr>
+            <tr><td class="p-2 font-semibold">Calendar section disagrees with the dashboard</td><td class="p-2">Coworker uses the real date while the page uses its as-of date. Clear the as-of date in production.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 REACT -->
+  <section id="react" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vblue">
+    <div class="bg-[#dcf1fa] px-6 py-4"><h2 class="text-ink font-bold text-xl">5. Path 2 — React app build (Salesforce Multi-Framework)</h2><p class="text-xs text-slate-600 mt-1">The React app runs on Salesforce. Salesforce signs the user in, hosts the files, and runs every data request with that seller's permissions.</p></div>
+    <div class="p-6 space-y-4 text-sm">
+      <div class="grid md:grid-cols-2 gap-3">
+        <img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/4c376afb-ee2e-4cf5-9d1e-426bd10dc950.png" alt="React top">
+        <img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/4cf26868-9a13-4cc1-8007-81720f9c3902.png" alt="React lower sections">
+      </div>
+      <ol class="space-y-3">
+        <li class="border rounded-lg p-3"><b class="text-ink">R1 · Confirm the org.</b> Check that the org is on Hyperforce (Company Information shows an instance like <code>USA876</code>), that Salesforce Multi-Framework is enabled with an active App Domain, that Edge Network is on, and that the first-party cookie requirement is off.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R2 · Generate the project.</b> Create a project from Salesforce's <b>React internal app</b> template (<code>reactinternalapp</code>, documented in "Generate an App from a Template"). It includes the UIBundle, an App Launcher entry, an access permission set, and an Agentforce Conversation Client component.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R3 · Install dependencies.</b> In <code>force-app/main/default/uiBundles/&lt;app&gt;</code>:
+<pre class="bg-slate-900 text-slate-100 rounded p-3 text-xs mt-2 overflow-x-auto">npm install --include=dev        # include dev tools even if NODE_ENV=production
+npm install @salesforce/agentforce-conversation-client@^12.11.0 chart.js@^4.4.4
+npm run build                    # baseline build should pass before you change anything</pre></li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R4 · Apex REST.</b> Deploy <code>SellerCommandCenterRest</code> (<code>/services/apexrest/scc/v1/dashboard</code> and <code>/ask</code>) with its test, and add it to the permission set. It wraps the shared controller and also returns <code>meta</code>: the org URL (for record links) and Coworker's agent ID.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R5 · Data client.</b> Call Apex REST through the Data SDK. It handles sign-in and CSRF, so there are no tokens in your code:
+<pre class="bg-slate-900 text-slate-100 rounded p-3 text-xs mt-2 overflow-x-auto">import { createDataSDK } from '@salesforce/platform-sdk';
+const sdk = await createDataSDK();
+const res = await sdk.fetch!('/services/apexrest/scc/v1/dashboard?scope=MINE&amp;quarter=CURRENT&amp;productType=ALL&amp;asOfDate=2026-09-14&amp;goal=11200000');
+const dashboard = await res.json();</pre></li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R6 · Components.</b> Port each section as a React component: Banner, KpiGrid, PacingChart, InsightsPanel, AvailsCard, WatchlistCard, OpportunitiesTable, TableauCard, TodayCard and NeedsAttentionCard. Add the Valpak palette as Tailwind theme tokens, and render the logo from <code>src/assets</code>. The app runs on its own domain, so record links must be absolute Lightning URLs that open in a new tab.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R7 · On-page Coworker chat.</b> Embed Coworker inline in a floating "messenger" panel (about 420×580px) with a launcher button. Keep it mounted while minimized, because the client embeds once per window. Use light message bubbles and override only the style tokens you need:
+<pre class="bg-slate-900 text-slate-100 rounded p-3 text-xs mt-2 overflow-x-auto">&lt;AgentforceConversationClient
+  agentId={meta.coworkerAgentId}          // Coworker = BotDefinition "SearchAgent" (0Xx…)
+  inline width="100%" height="100%" headerEnabled={false}
+  styleTokens={{
+    messageBlockInboundBackgroundColor: '#dcf1fa', messageBlockInboundTextColor: '#0b2540',
+    messageBlockOutboundBackgroundColor: '#f2f5f8', messageBlockOutboundTextColor: '#1b2a3a',
+    messageBlockFontSize: '13px', messageInputFontSize: '13px',
+  }} /&gt;</pre></li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R8 · Generate Seller Brief.</b> Clicking it opens the chat with an instant <b>seller brief snapshot</b> built from live dashboard data: Today, the dashboard figures, and top next steps with record links. An <b>Open full AI brief in Coworker ↗</b> button and a ↗ split button open the full AI brief in a new Coworker tab. The app also tries <code>getAccEmbed().execute(request, agentId)</code>. If the org's embedded chat supports that bridge, the full request also runs inside the on-page chat. See section 6 for the current limits.
+          <img class="rounded-lg border mt-2" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/6347e63b-6203-4b15-989c-a77a36d9c61a.png" alt="Brief snapshot"></li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R9 · Deploy and grant access.</b> Run <code>npm run build</code>, then deploy the project's <code>force-app</code> folder (UIBundle, CustomApplication, permission set) with your usual tool. Rename the app's label (for example "Seller Command Center (React)") and assign the app's access permission set to sellers.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R10 · Trust the app domain for the chat.</b> In Setup → Session Settings → Trusted Domains for Inline Frames, add <code>https://&lt;mydomain&gt;--c.my.salesforce.app</code> with IFrame type <b>Lightning Out</b>. Without it, the Coworker panel stays blank. For local preview only, also add <code>http://localhost:5173</code>, and remove it before production.</li>
+        <li class="border rounded-lg p-3"><b class="text-ink">R11 · Open it.</b> Use App Launcher → your app. The <code>/lightning/app/…</code> URL shows an empty Lightning app, because the React app is served from its own domain.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 6 COWORKER -->
+  <section id="coworker" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-navy">
+    <div class="bg-[#dfe7ef] px-6 py-4"><h2 class="text-ink font-bold text-xl">6. Agentforce Coworker integration — what's verified</h2></div>
+    <div class="p-6 space-y-4 text-sm">
+      <img class="rounded-lg border" src="https://assets.meshmesh.io/tenants/org_01KDY098Y468ZK9Q6DFDZXJBG6/task-assets/7d7d7f53-1f37-46ef-a59f-19d54836105e/98d0af3b-643f-4f33-973b-2318fd6c0c68.png" alt="Coworker generating the brief">
+      <table class="w-full border rounded-lg overflow-hidden text-xs md:text-sm">
+        <thead class="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500"><tr><th class="p-2">Integration route</th><th class="p-2">Result in reference org</th><th class="p-2">Notes</th></tr></thead>
+        <tbody class="divide-y">
+          <tr><td class="p-2 font-semibold">Coworker page link (<code>/lightning/coworker?c__term&amp;uid</code>)</td><td class="p-2 text-green-700 font-semibold">Works</td><td class="p-2">Not a published API. Salesforce moved it from <code>/lightning/search/agent</code> in October 2026. To rediscover it, go to global search → Ask Coworker and copy the address it opens.</td></tr>
+          <tr><td class="p-2 font-semibold">Coworker embedded in React (ACC inline)</td><td class="p-2 text-green-700 font-semibold">Works</td><td class="p-2">Needs the trusted Lightning Out domain (R10) and browsers that allow Salesforce cookies</td></tr>
+          <tr><td class="p-2 font-semibold">Send a message into the embedded chat (<code>execute</code>)</td><td class="p-2 text-amber-700 font-semibold">Not yet</td><td class="p-2">Exists in ACC package 12.x, but the org's embedded chat hasn't acknowledged it yet. The app tries it and falls back to the snapshot and new-tab option. The page can't type into the chat, which runs in a locked-down cross-origin frame.</td></tr>
+          <tr><td class="p-2 font-semibold">Coworker in the Lightning side panel (<code>lightning/accApi</code>)</td><td class="p-2 text-green-700 font-semibold">Worked in test</td><td class="p-2">The docs list SentOS (Coworker) as unsupported, but <code>open</code> and <code>execute</code> worked. Phrase requests specifically, because short ones can route to other agents.</td></tr>
+          <tr><td class="p-2 font-semibold">Coworker from Apex (<code>generateAiAgentResponse</code>)</td><td class="p-2 text-red-700 font-semibold">Not available</td><td class="p-2">Coworker (Search Agent) returns "Invalid Action Name"; standard employee agents work</td></tr>
+          <tr><td class="p-2 font-semibold">Agent API (REST) to Coworker</td><td class="p-2 text-slate-600 font-semibold">Not tested</td><td class="p-2">Needs an External Client App issuing JWT tokens; the regular session isn't accepted</td></tr>
+        </tbody>
+      </table>
+      <div class="bg-amber-50 border-l-4 border-amber-500 rounded p-4"><b>Credits:</b> every Coworker conversation uses Agentforce credits: briefs, on-page chat questions and side-panel requests. The rule-based insights and the brief snapshot don't.</div>
+    </div>
+  </section>
+
+  <!-- 7 ADDONS -->
+  <section id="addons" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vgreen">
+    <div class="bg-[#ecf5d7] px-6 py-4"><h2 class="text-ink font-bold text-xl">7. Optional AI add-ons</h2></div>
+    <div class="p-6 text-sm space-y-3">
+      <table class="w-full border rounded-lg overflow-hidden">
+        <thead class="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500"><tr><th class="p-2">Add-on</th><th class="p-2">What it adds</th><th class="p-2">Engine</th><th class="p-2">Needs</th></tr></thead>
+        <tbody class="divide-y">
+          <tr><td class="p-2 font-semibold">B · Side-panel brief</td><td class="p-2">Path 1 brief opens in the Agentforce side panel; the seller stays on Home</td><td class="p-2">ACC API from the LWC</td><td class="p-2">Agentforce + Coworker</td></tr>
+          <tr><td class="p-2 font-semibold">C · Coworker-written insights</td><td class="p-2">AI-written insight cards and Ask answers, with no custom agent</td><td class="p-2">Agent API (REST)</td><td class="p-2">External Client App + Named Credential</td></tr>
+          <tr><td class="p-2 font-semibold">C′ · Custom agent insights</td><td class="p-2">AI-written insights and Ask answers from a dedicated seller agent, generated overnight with Refresh</td><td class="p-2">Agent Script employee agent called from Apex</td><td class="p-2">Agentforce licensing, agent build</td></tr>
+        </tbody>
+      </table>
+      <p>These add-ons build on either path, because insights and Ask go through the shared Apex engine.</p>
+    </div>
+  </section>
+
+  <!-- 8 CUSTOMIZE -->
+  <section id="customize" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-navy">
+    <div class="bg-[#dfe7ef] px-6 py-4"><h2 class="text-ink font-bold text-xl">8. Customizing for your org</h2></div>
+    <div class="p-6 grid md:grid-cols-2 gap-6 text-sm">
+      <ul class="list-disc list-inside space-y-1">
+        <li><b>Goals, as-of date, territory, Coworker path:</b> Lightning App Builder (Path 1); <code>DEFAULTS</code> in <code>src/lib/scc.ts</code> (Path 2). Leave the as-of date blank in production.</li>
+        <li><b>Brand:</b> navy <code>#204869</code>, deep blue <code>#002f6c</code>, blue <code>#00a0df</code>, green <code>#82bc00</code>, alert <code>#c23934</code>, plus your logo. White card bodies with colored header bands.</li>
+        <li><b>Brief wording:</b> <code>sellerBriefPrompt</code> in both front ends</li>
+      </ul>
+      <ul class="list-disc list-inside space-y-1">
+        <li><b>Real media data:</b> replace <code>buildSample()</code> with your inventory and delivery sources, then remove the Sample tags</li>
+        <li><b>Real quotas:</b> read ForecastingQuota instead of the goal settings</li>
+        <li><b>Fiscal year:</b> adjust the quarter maths in the Apex Context class</li>
+        <li><b>Thresholds:</b> <code>buildOppRows()</code> and <code>pick()</code> in Apex</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 9 TEST -->
+  <section id="test" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vgreen">
+    <div class="bg-[#ecf5d7] px-6 py-4"><h2 class="text-ink font-bold text-xl">9. Test checklist</h2></div>
+    <div class="p-6 text-sm grid md:grid-cols-2 gap-6">
+      <ul class="space-y-1"><li class="font-semibold text-ink">Both paths</li>
+        <li>☐ Quota, booked and pace match a Closed Won report for the quarter</li>
+        <li>☐ The territory filter switches between my goal and the team goal</li>
+        <li>☐ Quarter and product filters refresh the live sections</li>
+        <li>☐ Month, Week and Cumulative views redraw the chart</li>
+        <li>☐ Opportunity tabs, the at-risk toggle, search, and row links work</li>
+        <li>☐ A seller (not an admin) with the permission set sees data</li>
+        <li>☐ The full AI brief opens in Coworker and runs automatically</li></ul>
+      <ul class="space-y-1"><li class="font-semibold text-ink">Path-specific</li>
+        <li>☐ Path 1: the Sales Home is full width; other apps keep their Home page</li>
+        <li>☐ Path 1: Clear returns the Ask panel to its original size</li>
+        <li>☐ Path 2: the app opens from the App Launcher on <code>*.salesforce.app</code></li>
+        <li>☐ Path 2: the Ask Coworker launcher opens the chat; text is readable</li>
+        <li>☐ Path 2: Generate Seller Brief shows the snapshot; ↗ opens the full brief</li>
+        <li>☐ Path 2: minimizing and reopening keeps the conversation</li></ul>
+    </div>
+  </section>
+
+  <!-- 10 TROUBLE -->
+  <section id="trouble" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-alert">
+    <div class="bg-[#fbe1df] px-6 py-4"><h2 class="font-bold text-xl text-[#8e1b17]">10. Troubleshooting &amp; lessons learned</h2></div>
+    <div class="p-6 text-sm">
+      <table class="w-full border rounded-lg overflow-hidden text-xs md:text-sm">
+        <thead class="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500"><tr><th class="p-2">Symptom</th><th class="p-2">Cause</th><th class="p-2">Fix</th></tr></thead>
+        <tbody class="divide-y">
+          <tr><td class="p-2">Changes don't appear after deploying (Path 1)</td><td class="p-2">Component caching</td><td class="p-2">Wait 1–2 minutes and hard-refresh. In sandboxes, disable secure and persistent browser caching.</td></tr>
+          <tr><td class="p-2">Dashboard fills only about 2/3 of the page (Path 1)</td><td class="p-2">The standard home templates</td><td class="p-2">Use the full-width single-region template</td></tr>
+          <tr><td class="p-2">$0 booked and every deal at risk</td><td class="p-2">Demo data dated in the past</td><td class="p-2">Use the as-of date for demos; leave it blank in production</td></tr>
+          <tr><td class="p-2">"Page doesn't exist" on Generate Seller Brief</td><td class="p-2">Coworker moved</td><td class="p-2">Update the Coworker URL path (global search → Ask Coworker shows the current format)</td></tr>
+          <tr><td class="p-2">React build fails: missing Vite plugins</td><td class="p-2">Dev dependencies skipped (<code>NODE_ENV=production</code>)</td><td class="p-2"><code>npm install --include=dev</code></td></tr>
+          <tr><td class="p-2">Empty "No Items" app when opening the React app</td><td class="p-2">Opened via a <code>/lightning/app/…</code> URL</td><td class="p-2">Open it from the App Launcher</td></tr>
+          <tr><td class="p-2">Coworker panel blank; console shows "unable to load the iframe"</td><td class="p-2">App domain not trusted for Lightning Out</td><td class="p-2">Step R10</td></tr>
+          <tr><td class="p-2">Coworker panel blank; network shows <code>ERR_TOO_MANY_REDIRECTS</code></td><td class="p-2">The browser blocks third-party Salesforce cookies (private windows and strict modes)</td><td class="p-2">Allow cookies for <code>[*.]salesforce.app</code> and <code>[*.]force.com</code>, or use a normal window</td></tr>
+          <tr><td class="p-2">Chat text hard to read</td><td class="p-2">Too many style-token overrides</td><td class="p-2">Use light bubbles and override only the tokens you need</td></tr>
+          <tr><td class="p-2">Brief opens a new tab after a delay</td><td class="p-2">The org's embedded chat doesn't acknowledge <code>execute</code></td><td class="p-2">Use the snapshot plus the ↗ pattern (R8); don't block on the confirmation</td></tr>
+          <tr><td class="p-2">Short Coworker requests ask "which account?"</td><td class="p-2">Requests routed to other agents' topics</td><td class="p-2">Send the full, specific brief request</td></tr>
+          <tr><td class="p-2">Emoji show as empty boxes</td><td class="p-2">No emoji font on some machines</td><td class="p-2">Use plain text labels</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 11 ROLLBACK -->
+  <section id="rollback" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-navy">
+    <div class="bg-[#dfe7ef] px-6 py-4"><h2 class="text-ink font-bold text-xl">11. Rollback</h2></div>
+    <div class="p-6 text-sm space-y-2">
+      <p><b>Path 1:</b> in Lightning App Builder, remove the page's App Default assignment for the Sales app. Sales Home immediately returns to the org default.</p>
+      <p><b>Path 2:</b> remove the app's access permission set from users, or delete the UIBundle and its App Launcher entry. Remove the trusted Lightning Out domain if no longer needed.</p>
+      <p>Neither path changes existing records, pages or agents.</p>
+    </div>
+  </section>
+
+  <!-- APPENDIX -->
+  <section id="files" class="bg-white rounded-xl shadow overflow-hidden border-t-4 border-vblue">
+    <div class="bg-[#dcf1fa] px-6 py-4"><h2 class="text-ink font-bold text-xl">Appendix: source files</h2></div>
+    <div class="p-6 text-sm grid md:grid-cols-2 gap-4">
+<pre class="bg-slate-900 text-slate-100 rounded p-4 text-xs overflow-x-auto">Shared + Path 1 (Salesforce DX)
+force-app/main/default/
+├── classes/
+│   ├── SellerCommandCenterController(.cls, Test)
+│   └── SellerCommandCenterRest(.cls, Test)   ← Path 2
+├── lwc/sellerCommandCenter/
+├── aura/commandCenterFullWidth/
+├── staticresources/ chartjs, valpakClippLogo
+├── flexipages/Seller_Command_Center_Home
+└── permissionsets/Seller_Command_Center</pre>
+<pre class="bg-slate-900 text-slate-100 rounded p-4 text-xs overflow-x-auto">Path 2 (React app project) — in the shared source pack, .tsx files carry an extra .txt suffix; remove it before building
+force-app/main/default/
+├── uiBundles/sccreact/
+│   ├── sccreact.uibundle-meta.xml
+│   ├── package.json · vite.config.ts
+│   └── src/
+│       ├── api/scc/ client.ts · types.ts
+│       ├── lib/scc.ts
+│       ├── components/scc/ (Banner, KpiGrid, PacingChart,
+│       │   InsightsPanel, InventorySections, OpportunitiesTable,
+│       │   LowerRow, CoworkerPanel, BriefSnapshot, Card, ChartCanvas)
+│       └── pages/CommandCenter.tsx
+├── applications/sccreact.app-meta.xml
+└── permissionsets/sccreact_Access</pre>
+    </div>
+  </section>
+
+  <p class="text-center text-xs text-slate-500">Seller Command Center · Configuration &amp; Implementation Guide · Two build paths, one data engine, Agentforce Coworker</p>
+</main>
+
+<div data-mm-footer style="all:initial;display:flex;align-items:center;justify-content:center;padding:40px 24px 36px;margin-top:24px;border-top:1px solid rgba(127,127,127,.2);font:inherit;">
+  <img data-mm-footer-logo src="https://meshmesh.io/brand/meshmesh-salesforce-wordmark-blk.svg" alt="MeshMesh for Salesforce" style="display:block;height:26px;width:auto;max-width:none;margin:0;opacity:.8;border:0;box-shadow:none;" />
+</div>
+<script>(function(){try{
+  var logo=document.querySelector('[data-mm-footer-logo]');if(!logo)return;
+  var cx=document.createElement('canvas').getContext('2d');
+  function rgba(c){cx.clearRect(0,0,1,1);cx.fillStyle='#000';cx.fillStyle=c;cx.fillRect(0,0,1,1);return cx.getImageData(0,0,1,1).data;}
+  function bg(el){while(el){var c=getComputedStyle(el).backgroundColor;if(c){var p=rgba(c);if(p[3]>25)return p;}el=el.parentElement;}return null;}
+  var p=bg(document.body)||bg(document.documentElement);
+  if(p&&(0.2126*p[0]+0.7152*p[1]+0.0722*p[2])/255<0.5)logo.src="https://meshmesh.io/brand/meshmesh-salesforce-wordmark-wht.svg";
+}catch(e){}})();</script>
+</body>
+</html>
